@@ -1,46 +1,35 @@
-// Dynamic backend URL configuration
-// Automatically detects the correct URLs based on where the app is running
+// ============================================
+// BACKEND CONFIGURATION
+// ============================================
 
-const getBackendUrls = () => {
-  const hostname = window.location.hostname;
-  const port = window.location.port;
-  const protocol = window.location.protocol;
-  
-  // Check if running locally (development mode)
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    // Local development - always use direct backend URLs
-    // React dev server runs on 3000, backends on 8000 and 5001
-    return {
-      flexUrl: 'http://localhost:8000',
-      mediapipeUrl: 'http://localhost:5001',
-      useProxy: false
-    };
-  }
-  
-  // Running on remote server (Vast.ai, etc.)
-  // Use nginx proxy through the same origin - this avoids CORS issues!
-  return {
-    flexUrl: '', // Empty means same origin, use /api/flex/
-    mediapipeUrl: `${protocol}//${hostname}:${port}`, // WebSocket needs full URL
-    useProxy: true
-  };
-};
+// Vast.ai backend URLs
+const VASTAI_HOST = '1.208.108.242';
+const VASTAI_MEDIAPIPE_PORT = '58723';
+const VASTAI_FLEX_PORT = '58778';
 
-// Get URLs at module load time
-const { flexUrl, mediapipeUrl, useProxy } = getBackendUrls();
+// Local backend URLs
+const LOCAL_MEDIAPIPE_PORT = '5001';
+const LOCAL_FLEX_PORT = '8000';
 
-// Export URLs - if useProxy is true, frontend will use /api/flex/ and /api/mediapipe/
-export const FLEX_API_URL = useProxy ? '' : flexUrl;
-export const MEDIAPIPE_WS_URL = mediapipeUrl;
-export const USE_PROXY = useProxy;
+// Auto-detect: use local URLs when running on localhost:3000, otherwise use Vast.ai
+const isLocal = typeof window !== 'undefined' && 
+                window.location.hostname === 'localhost' && 
+                window.location.port === '3000';
 
-// API endpoints
+// Choose URLs based on environment
+export const FLEX_API_URL = isLocal 
+  ? `http://localhost:${LOCAL_FLEX_PORT}`
+  : `http://${VASTAI_HOST}:${VASTAI_FLEX_PORT}`;
+
+export const MEDIAPIPE_WS_URL = isLocal
+  ? `http://localhost:${LOCAL_MEDIAPIPE_PORT}`
+  : `http://${VASTAI_HOST}:${VASTAI_MEDIAPIPE_PORT}`;
+
+// Simple endpoint builder
 export const getFlexEndpoint = (path) => {
-  if (USE_PROXY) {
-    return `/api/flex${path.startsWith('/') ? path : '/' + path}`;
-  }
-  return `${FLEX_API_URL}${path.startsWith('/') ? path : '/' + path}`;
+  const cleanPath = path.startsWith('/') ? path : '/' + path;
+  return `${FLEX_API_URL}${cleanPath}`;
 };
 
-// Also export the function for dynamic reconfiguration
-export { getBackendUrls };
+// Debug logging
+console.log('Backend Config:', { flex: FLEX_API_URL, mediapipe: MEDIAPIPE_WS_URL, isLocal });

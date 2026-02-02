@@ -3,6 +3,7 @@ eventlet.monkey_patch()  # MUST be first
 
 from flask import Flask, render_template_string, request, jsonify
 from flask_socketio import SocketIO, emit
+from flask_cors import CORS
 import cv2
 import base64
 import threading
@@ -26,6 +27,11 @@ cap = None
 cap_lock = threading.Lock()
 current_stream_url = os.environ.get('CAMERA_STREAM_URL', 'http://localhost:8080/video')
 
+# Camera rotation settings: 0, 90, 180, 270 degrees
+camera_rotation = int(os.environ.get('CAMERA_ROTATION', '0'))
+camera_flip_horizontal = os.environ.get('CAMERA_FLIP_H', 'true').lower() == 'true'
+camera_flip_vertical = os.environ.get('CAMERA_FLIP_V', 'false').lower() == 'true'
+
 def init_camera(url):
     """Initialize or reinitialize camera with new URL"""
     global cap, current_stream_url
@@ -48,6 +54,7 @@ if not init_camera(current_stream_url):
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
+CORS(app)  # Enable CORS for all routes
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # --- 1. LOAD YOUR NEW MODELS ---
@@ -131,7 +138,20 @@ def video_processing_thread():
                 socketio.sleep(2)
                 continue
             
-            frame = cv2.flip(frame, 1)
+            # Apply rotation based on settings
+            if camera_rotation == 90:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+            elif camera_rotation == 180:
+                frame = cv2.rotate(frame, cv2.ROTATE_180)
+            elif camera_rotation == 270:
+                frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            
+            # Apply flips
+            if camera_flip_horizontal:
+                frame = cv2.flip(frame, 1)
+            if camera_flip_vertical:
+                frame = cv2.flip(frame, 0)
+            
             annotated_frame = frame.copy()
             
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -219,7 +239,34 @@ def camera_status():
         is_open = cap is not None and cap.isOpened()
     return jsonify({
         "connected": is_open,
-        "current_url": current_stream_url
+        "current_url": current_stream_url,
+        "rotation": camera_rotation,
+        "flip_horizontal": camera_flip_horizontal,
+        "flip_vertical": camera_flip_vertical
+    })
+
+@app.route('/set_rotation', methods=['POST'])
+def set_rotation():
+    """Set camera rotation and flip settings"""
+    global camera_rotation, camera_flip_horizontal, camera_flip_vertical
+    data = request.get_json()
+    
+    if 'rotation' in data:
+        rot = int(data['rotation'])
+        if rot in [0, 90, 180, 270]:
+            camera_rotation = rot
+    
+    if 'flip_horizontal' in data:
+        camera_flip_horizontal = bool(data['flip_horizontal'])
+    
+    if 'flip_vertical' in data:
+        camera_flip_vertical = bool(data['flip_vertical'])
+    
+    return jsonify({
+        "status": "success",
+        "rotation": camera_rotation,
+        "flip_horizontal": camera_flip_horizontal,
+        "flip_vertical": camera_flip_vertical
     })
 
 @app.route('/reconnect', methods=['POST'])
