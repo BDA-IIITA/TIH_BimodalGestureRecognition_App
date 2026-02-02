@@ -1,0 +1,130 @@
+# Vast.ai All-in-One Dockerfile
+# Runs all 3 services in one container
+
+FROM python:3.10-slim
+
+# Install Node.js and nginx
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    nginx \
+    supervisor \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# ===== FLEX BACKEND =====
+COPY flex/requirements.txt /app/flex/requirements.txt
+RUN pip install --no-cache-dir -r /app/flex/requirements.txt
+
+COPY flex/ /app/flex/
+
+# ===== MEDIAPIPE BACKEND =====
+COPY MediaPipe/requirements.txt /app/mediapipe/requirements.txt
+RUN pip install --no-cache-dir -r /app/mediapipe/requirements.txt
+
+COPY MediaPipe/app.py /app/mediapipe/
+COPY MediaPipe/hand_landmarker.task /app/mediapipe/
+COPY MediaPipe/gesture_classifier_rf.pkl /app/mediapipe/
+
+# Camera stream URL (pass at runtime with -e CAMERA_STREAM_URL=...)
+ENV CAMERA_STREAM_URL=http://localhost:8080/video
+
+# ===== FRONTEND =====
+COPY frontend/package*.json /app/frontend/
+WORKDIR /app/frontend
+RUN npm install
+
+COPY frontend/ /app/frontend/
+
+# Build React with backend URLs (pass at build time with --build-arg)
+ARG REACT_APP_FLEX_URL=http://localhost:8000
+ARG REACT_APP_MEDIAPIPE_URL=http://localhost:5001
+ENV REACT_APP_FLEX_URL=$REACT_APP_FLEX_URL
+ENV REACT_APP_MEDIAPIPE_URL=$REACT_APP_MEDIAPIPE_URL
+RUN npm run build
+
+# Copy built frontend to nginx
+RUN cp -r /app/frontend/build/* /var/www/html/
+
+# ===== NGINX CONFIG =====
+# Proxy API requests to backend services (allows frontend to use relative URLs)
+RUN echo 'server { \
+    listen 3000; \
+    root /var/www/html; \
+    index index.html; \
+    \
+    location / { try_files $uri $uri/ /index.html; } \
+    \
+    location /api/flex/ { \
+        proxy_pass http://127.0.0.1:8000/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+    } \
+    \
+    location /api/mediapipe/ { \
+        proxy_pass http://127.0.0.1:5001/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+    } \
+    \
+    location /socket.io/ { \
+        proxy_pass http://127.0.0.1:5001/socket.io/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+    } \
+}' > /etc/nginx/sites-available/default
+
+# ===== SUPERVISOR CONFIG =====
+RUN echo '[supervisord] \n\
+nodaemon=true \n\
+\n\
+[program:flex] \n\
+command=python /app/flex/main.py \n\
+directory=/app/flex \n\
+autostart=true \n\
+autorestart=true \n\
+stdout_logfile=/dev/stdout \n\
+stdout_logfile_maxbytes=0 \n\
+stderr_logfile=/dev/stderr \n\
+stderr_logfile_maxbytes=0 \n\
+\n\
+[program:mediapipe] \n\
+command=python /app/mediapipe/app.py \n\
+directory=/app/mediapipe \n\
+autostart=true \n\
+autorestart=true \n\
+stdout_logfile=/dev/stdout \n\
+stdout_logfile_maxbytes=0 \n\
+stderr_logfile=/dev/stderr \n\
+stderr_logfile_maxbytes=0 \n\
+\n\
+[program:nginx] \n\
+command=nginx -g "daemon off;" \n\
+autostart=true \n\
+autorestart=true \n\
+stdout_logfile=/dev/stdout \n\
+stdout_logfile_maxbytes=0 \n\
+stderr_logfile=/dev/stderr \n\
+stderr_logfile_maxbytes=0 \n\
+' > /etc/supervisor/conf.d/services.conf
+
+WORKDIR /app
+
+# Expose all ports
+EXPOSE 3000 5001 8000
+
+CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]

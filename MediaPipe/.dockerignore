@@ -1,0 +1,42 @@
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Unused model files
+gesture_sklearn_last.pkl
+keypoint_scaler_last.pkl
+
+# Pyenv
+.python-version
+
+# Docker
+Dockerfile
+docker-compose*.yml
+
+# Logs
+*.log
