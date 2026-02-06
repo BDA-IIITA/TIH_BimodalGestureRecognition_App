@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import io from "socket.io-client";
-import { getFlexEndpoint, MEDIAPIPE_WS_URL, FLEX_API_URL } from "./config";
+import { getFlexEndpoint, MEDIAPIPE_WS_URL, SOCKET_URL } from "./config";
 
 const POLL_INTERVAL = 200; // ms for Flex API polling
 
@@ -69,7 +69,8 @@ export default function App() {
   const connectMediapipe = useCallback(() => {
     if (socketRef.current) return;
 
-    const sio = io(MEDIAPIPE_WS_URL, {
+    // Use SOCKET_URL for WebSocket connection (empty string = same origin in production)
+    const sio = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 5,

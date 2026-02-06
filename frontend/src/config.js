@@ -2,28 +2,25 @@
 // BACKEND CONFIGURATION
 // ============================================
 
-// Vast.ai backend URLs
-const VASTAI_HOST = '1.208.108.242';
-const VASTAI_MEDIAPIPE_PORT = '58723';
-const VASTAI_FLEX_PORT = '58778';
+// Detect if running in development mode (npm start on localhost:3000)
+const isDevelopment = typeof window !== 'undefined' && 
+                      window.location.hostname === 'localhost' && 
+                      window.location.port === '3000';
 
-// Local backend URLs
-const LOCAL_MEDIAPIPE_PORT = '5001';
-const LOCAL_FLEX_PORT = '8000';
+// In development: use direct backend ports
+// In production (Docker): use nginx proxy paths on same origin
+export const FLEX_API_URL = isDevelopment 
+  ? 'http://localhost:8000'
+  : '/api/flex';
 
-// Auto-detect: use local URLs when running on localhost:3000, otherwise use Vast.ai
-const isLocal = typeof window !== 'undefined' && 
-                window.location.hostname === 'localhost' && 
-                window.location.port === '3000';
+export const MEDIAPIPE_WS_URL = isDevelopment
+  ? 'http://localhost:5001'
+  : '/api/mediapipe';
 
-// Choose URLs based on environment
-export const FLEX_API_URL = isLocal 
-  ? `http://localhost:${LOCAL_FLEX_PORT}`
-  : `http://${VASTAI_HOST}:${VASTAI_FLEX_PORT}`;
-
-export const MEDIAPIPE_WS_URL = isLocal
-  ? `http://localhost:${LOCAL_MEDIAPIPE_PORT}`
-  : `http://${VASTAI_HOST}:${VASTAI_MEDIAPIPE_PORT}`;
+// Socket.IO uses same origin in production (nginx proxies /socket.io/)
+export const SOCKET_URL = isDevelopment
+  ? 'http://localhost:5001'
+  : '';  // Empty string = same origin
 
 // Simple endpoint builder
 export const getFlexEndpoint = (path) => {
@@ -32,4 +29,9 @@ export const getFlexEndpoint = (path) => {
 };
 
 // Debug logging
-console.log('Backend Config:', { flex: FLEX_API_URL, mediapipe: MEDIAPIPE_WS_URL, isLocal });
+console.log('Backend Config:', { 
+  flex: FLEX_API_URL, 
+  mediapipe: MEDIAPIPE_WS_URL, 
+  socket: SOCKET_URL || '(same origin)',
+  isDevelopment 
+});

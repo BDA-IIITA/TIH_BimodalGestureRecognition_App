@@ -5,6 +5,10 @@ A unified gesture recognition system using MediaPipe and Flex Sensors.
 ## 🚀 Quick Start (Docker)
 
 ```bash
+docker build --platform linux/amd64 -t swarupnarkhede/gesture-app:vastai -f Dockerfile.vastai .
+```
+
+```bash
 docker run -p 3000:3000 -p 5001:5001 -p 8000:8000 swarupnarkhede/gesture-app:vastai
 ```
 
