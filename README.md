@@ -20,8 +20,33 @@ Then open: http://localhost:3000
 ├── flex/           # Flex sensor backend (FastAPI)
 ├── frontend/       # React frontend
 ├── MediaPipe/      # MediaPipe gesture detection
+├── android-app/    # Android application for mobile gesture interaction
 └── Dockerfile.vastai  # Cloud deployment
 ```
+
+## 📱 Android App
+
+The android-app module provides a mobile interface for interacting with the gesture recognition system.
+
+# Features
+
+* Connects to backend APIs
+
+* Displays gesture recognition results
+
+* Enables mobile-based control/visualization
+
+# Run the Android App
+
+1. Open the android-app folder in Android Studio
+
+2. Let Gradle sync
+
+3. Connect device or start emulator
+
+4. Click Run
+
+Make sure backend services are running so the app can communicate with the server.
 
 ## 🌐 Cloud Deployment (Vast.ai)
 
