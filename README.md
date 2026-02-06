@@ -24,11 +24,11 @@ Then open: http://localhost:3000
 └── Dockerfile.vastai  # Cloud deployment
 ```
 
-## 📱 Android App
+# 📱 Android App
 
 The android-app module provides a mobile interface for interacting with the gesture recognition system.
 
-# Features
+## Features
 
 * Connects to backend APIs
 
@@ -36,17 +36,17 @@ The android-app module provides a mobile interface for interacting with the gest
 
 * Enables mobile-based control/visualization
 
-# Run the Android App
+## 🚀 How to Run the Android App
 
-1. Open the android-app folder in Android Studio
+1. Open android-app in Android Studio
 
-2. Let Gradle sync
+2. Allow Gradle to sync dependencies
 
-3. Connect device or start emulator
+3. Connect Android device or start emulator
 
-4. Click Run
+4. Click Run ▶
 
-Make sure backend services are running so the app can communicate with the server.
+Make sure backend services (MediaPipe/Flex/API) are running so the app can communicate with them.
 
 ## 🌐 Cloud Deployment (Vast.ai)
 
